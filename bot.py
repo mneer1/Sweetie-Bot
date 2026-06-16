@@ -53,7 +53,7 @@ class ApprovalView(discord.ui.View):
         await interaction.response.send_message("تم رفض الصورة وإلغاء النشر.", ephemeral=False)
 
 # مهمة دورية لفحص الموقع كل 15 دقيقة
-@tasks.loop(minutes=15)
+@tasks.loop(minutes=5)
 async def fetch_derpibooru():
     channel = bot.get_channel(ADMIN_CHANNEL_ID)
     if not channel:
