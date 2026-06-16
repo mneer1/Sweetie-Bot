@@ -1,11 +1,11 @@
 import discord
 from discord.ext import tasks, commands
 import aiohttp
-
+import os
 # ================= إعدادات البوت ================
-TOKEN = 'YOUR_TOKEN_HERE'
+TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+WEBHOOK_URL = os.getenv("WEBHOOK_URL")
 ADMIN_CHANNEL_ID = 1516219570694652006 # استبدله بـ ID قناة الإدارة
-WEBHOOK_URL = 'https://discord.com/api/webhooks/...'# رابط الـ API للبحث عن تاق safe وترتيبها من الأحدث للأقدم
 API_URL = 'https://derpibooru.org/api/v1/json/search/images?q=safe&sf=created_at&sd=desc'
 # =================================================
 
