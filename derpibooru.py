@@ -4,14 +4,18 @@
 import config
 
 def get_api_url():
-    # تجهيز التاغات المطلوبة
-    query_parts = [tag.replace(" ", "+") for tag in config.INCLUDE_TAGS]
-    
-    # إضافة علامة السالب (-) للتاغات المراد استبعادها
+    query_parts = []
+
+    # التاغات المطلوبة
+    query_parts.extend(config.INCLUDE_TAGS)
+
+    # التاغات المستبعدة
     for tag in config.EXCLUDE_TAGS:
-        query_parts.append(f"-{tag.replace(' ', '+')}")
-    
-    # ربط التاغات بترميز الفاصلة الخاص بالروابط %2C+
-    query_string = "%2C+".join(query_parts)
-    
-    return f'https://derpibooru.org/api/v1/json/search/images?q={query_string}&sf=created_at&sd=desc'
+        query_parts.append(f"-{tag}")
+
+    query = ", ".join(query_parts)
+
+    return (
+        "https://derpibooru.org/api/v1/json/search/images"
+        f"?q={query}&sf=created_at&sd=desc"
+    )

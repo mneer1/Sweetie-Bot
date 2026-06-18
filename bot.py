@@ -166,6 +166,7 @@ async def on_ready():
 @bot.command()
 async def test(ctx):
     await ctx.send("سويتي بوت تعمل بنجاح!")
+    print(get_api_url())
 
 #ربط الملفات
 @bot.event
