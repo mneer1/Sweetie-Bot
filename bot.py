@@ -1,11 +1,31 @@
 import discord
 from discord.ext import tasks, commands
 import aiohttp
-import os
+import json
+import datetime
+
+#  تحميل الإحصائيات
+def load_stats():
+    try:
+        with open("stats.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {"total": 0, "accepted": 0, "rejected": 0, "admins": {}}
+
+#  حفظ الإحصائيات
+def save_stats(stats):
+    with open("stats.json", "w") as f:
+        json.dump(stats, f)
+
+stats_data = load_stats()
+
+# من config 
+from config import TOKEN, WEBHOOK_URL, ADMIN_CHANNEL_ID
+from derpibooru import get_api_url
 # ================= إعدادات البوت ================
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-WEBHOOK_URL = os.getenv("WEBHOOK_URL")
-ADMIN_CHANNEL_ID = 1516219570694652006 # استبدله بـ ID قناة الإدارة
+#TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+#WEBHOOK_URL = os.getenv("WEBHOOK_URL")
+#ADMIN_CHANNEL_ID = 1516219570694652006 # استبدله بـ ID قناة الإدارة
 API_URL = 'https://derpibooru.org/api/v1/json/search/images?q=safe&sf=created_at&sd=desc'
 # =================================================
 
@@ -32,7 +52,7 @@ class ApprovalView(discord.ui.View):
             webhook = discord.Webhook.from_url(WEBHOOK_URL, session=session)
             embed = discord.Embed(
                 title=f"منشور بواسطة: {self.uploader}", 
-                url=self.post_url, 
+               # url=self.post_url, 
                 description=self.description,
                 color=discord.Color.green()
             )
@@ -52,15 +72,15 @@ class ApprovalView(discord.ui.View):
         await interaction.message.edit(view=self)
         await interaction.response.send_message("تم رفض الصورة وإلغاء النشر.", ephemeral=False)
 
-# مهمة دورية لفحص الموقع كل 15 دقيقة
+# مهمة دورية لفحص الموقع كل 5 دقيقة
 @tasks.loop(minutes=5)
 async def fetch_derpibooru():
     channel = bot.get_channel(ADMIN_CHANNEL_ID)
     if not channel:
         return
-
+    current_api_url = get_api_url()
     async with aiohttp.ClientSession() as session:
-        async with session.get(API_URL) as response:
+        async with session.get(current_api_url) as response:
             if response.status == 200:
                 data = await response.json()
                 images = data.get('images', [])
@@ -86,7 +106,7 @@ async def fetch_derpibooru():
                         
                         embed = discord.Embed(
                             title=f"مراجعة صورة جديدة | الناشر: {uploader}", 
-                            url=post_url, 
+                          #  url=post_url, 
                             description=description,
                             color=discord.Color.orange()
                         )
@@ -100,9 +120,15 @@ async def on_ready():
     print(f'البوت {bot.user} يعمل الآن!')
     fetch_derpibooru.start()
 
-# أمر تجريبي للتأكد من اتصال البوت واستجابته
+# اختبار البنق ping 
 @bot.command()
 async def test(ctx):
     await ctx.send("سويتي بوت تعمل بنجاح!")
 
+#ربط الملفات
+@bot.event
+async def setup_hook():
+    await bot.load_extension("commands.tags")
+    await bot.load_extension("commands.admin")
+    print("تم تحميل ملفات الأوامر بنجاح!")
 bot.run(TOKEN)
