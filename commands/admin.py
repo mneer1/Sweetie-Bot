@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import db  # تأكد أن ملف db.py موجود في نفس المجلد
+import db  # استيراد ملف الـ db
 
 class Admin(commands.Cog):
     def __init__(self, bot):
@@ -27,13 +27,13 @@ class Admin(commands.Cog):
     @commands.command(name="test_fetch")
     @commands.has_permissions(administrator=True)
     async def test_fetch(self, ctx):
-        await ctx.send("جاري فحص الاتصال بالـ API وقاعدة البيانات...")
+        await ctx.send("🔄 جاري إعادة تشغيل مهمة البحث (fetch task) للتحقق من الاتصال...")
         try:
-            # نتأكد أن الدالة تعمل
-            await self.bot.fetch_derpibooru.callback(self.bot) 
-            await ctx.send("تم تشغيل عملية البحث، راجع الـ Console (Logs) للنتائج!")
+            # استخدام restart() بدلاً من callback() لأنها آمنة للـ tasks
+            self.bot.fetch_derpibooru.restart()
+            await ctx.send("✅ تم إعادة تشغيل المهمة بنجاح، راجع الـ Console.")
         except Exception as e:
-            await ctx.send(f"حدث خطأ: {e}")
+            await ctx.send(f"حدث خطأ أثناء إعادة التشغيل: {e}")
 
     # أمر فحص قاعدة البيانات
     @commands.command(name="check_db")
@@ -45,40 +45,6 @@ class Admin(commands.Cog):
             await ctx.send(f"التاغات التي يراها البوت حالياً: \n`{tags}`")
         except Exception as e:
             await ctx.send(f"حدث خطأ أثناء قراءة القاعدة: {e}")
-
-    # أمر الإحصائيات (الموحد)
-    @commands.command(name="stats")
-    async def stats(self, ctx, member: discord.Member = None):
-        """عرض الإحصائيات العامة أو إحصائيات مستخدم: !stats أو !stats @user"""
-        try:
-            # إذا لم يتم تحديد شخص، نعرض الإحصائيات العامة
-            if member is None:
-                data = await db.get_global_stats()
-                if not data:
-                    await ctx.send("لا توجد إحصائيات عامة مسجلة بعد.")
-                    return
-                
-                embed = discord.Embed(title="📊 الإحصائيات العامة للبوت", color=discord.Color.gold())
-                embed.add_field(name="إجمالي", value=data['total'], inline=True)
-                embed.add_field(name="مقبول ✅", value=data['accepted'], inline=True)
-                embed.add_field(name="مرفوض ❌", value=data['rejected'], inline=True)
-                await ctx.send(embed=embed)
-            
-            # إذا تم تحديد شخص، نعرض إحصائيات المستخدم
-            else:
-                data = await db.get_user_stats(member.id)
-                if not data:
-                    await ctx.send(f"هذا المستخدم ({member.display_name}) ليس لديه إحصائيات بعد.")
-                    return
-                
-                embed = discord.Embed(title=f"📊 إحصائيات {member.display_name}", color=discord.Color.blue())
-                embed.add_field(name="إجمالي", value=data['total'], inline=True)
-                embed.add_field(name="مقبول ✅", value=data['accepted'], inline=True)
-                embed.add_field(name="مرفوض ❌", value=data['rejected'], inline=True)
-                await ctx.send(embed=embed)
-                
-        except Exception as e:
-            await ctx.send(f"حدث خطأ أثناء جلب الإحصائيات: {e}")
 
 async def setup(bot):
     await bot.add_cog(Admin(bot))

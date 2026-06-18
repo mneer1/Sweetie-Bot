@@ -1,14 +1,12 @@
 import discord
 from discord.ext import tasks, commands
 import aiohttp
-import db  # نستدعي ملف قاعدة البيانات
+import db  # تأكد أن هذا الملف يحتوي على update_both_stats
 
 from config import TOKEN, WEBHOOK_URL, ADMIN_CHANNEL_ID
-# تأكد أن استيراد get_api_url صحيح أو استبدله بـ API_BASE_URL مباشرة
-from derpibooru import get_api_url
 
+# إعدادات البوت
 API_BASE_URL = "https://derpibooru.org/api/v1/json/search/images"
-
 intents = discord.Intents.default()
 intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -39,7 +37,6 @@ class ApprovalView(discord.ui.View):
     @discord.ui.button(label="قبول ✅", style=discord.ButtonStyle.green)
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-
         # تحديث قاعدة البيانات (العام + المستخدم)
         await db.update_both_stats(interaction.user.id, "accepted")
         
@@ -63,7 +60,6 @@ class ApprovalView(discord.ui.View):
     @discord.ui.button(label="رفض ❌", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-
         # تحديث قاعدة البيانات (العام + المستخدم)
         await db.update_both_stats(interaction.user.id, "rejected")
 
@@ -120,6 +116,7 @@ async def on_ready():
 
 @bot.event
 async def setup_hook():
+    # تحميل الإضافات (Cogs)
     await bot.load_extension("commands.tags")
     await bot.load_extension("commands.admin")
     await bot.load_extension("commands.stats")
