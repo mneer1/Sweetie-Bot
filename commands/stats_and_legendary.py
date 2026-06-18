@@ -37,15 +37,14 @@ class StatsAndLegendary(commands.Cog):
     # الأمر المحدث لحل الثغرة وتطبيق فلاتر الحجب
     @commands.command(name="legendary")
     async def legendary_post(self, ctx):
-        random_page = random.randint(1, 1000)
-        
-        # 🛠️ حل الثغرة: بناء الاستعلام ديناميكياً لتدمج تاغ safe مع الفلاتر الممنوعة برمز (-)
+        # 🛠️ الحل: استخدام sf=random من الموقع مباشرة لتجنب أخطاء أرقام الصفحات الوهمية
         query_parts = ["safe"]
         for tag in config.EXCLUDE_TAGS:
             query_parts.append(f"-{tag.replace(' ', '+')}")
             
         query_string = "%2C+".join(query_parts)
-        api_url = f'https://derpibooru.org/api/v1/json/search/images?q={query_string}&sf=upvotes&sd=desc&page={random_page}'
+        # الرابط الآن يجلب صورة عشوائية آمنة بدون الحاجة لتحديد رقم صفحة
+        api_url = f'https://derpibooru.org/api/v1/json/search/images?q={query_string}&sf=random'
         
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as response:
@@ -53,13 +52,13 @@ class StatsAndLegendary(commands.Cog):
                     data = await response.json()
                     images = data.get('images', [])
                     if images:
-                        img = random.choice(images)
+                        img = random.choice(images) # يختار واحدة من الصور العشوائية
                         image_url = img['representations'].get('large') or img['view_url']
                         uploader = img.get('uploader') or "مجهول"
                         score = img.get('score', 0)
                         
                         embed = discord.Embed(
-                            title=f"🌟 منشور أسطوري | الناشر: {uploader}", 
+                            title=f"🌟 منشور عشوائي | الناشر: {uploader}", 
                             description=f"التقييم (Upvotes): {score} ⬆️",
                             color=discord.Color.gold()
                         )
@@ -72,7 +71,7 @@ class StatsAndLegendary(commands.Cog):
                     else:
                         await ctx.send("لم يتم العثور على صور تطابق الفلاتر الحالية.")
                 else:
-                    await ctx.send("حدث خطأ أثناء جلب المنشور الأسطوري.")
+                    await ctx.send(f"حدث خطأ في الاتصال. كود الخطأ: {response.status}")
 
 async def setup(bot):
     await bot.add_cog(StatsAndLegendary(bot))

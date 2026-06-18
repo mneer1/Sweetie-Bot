@@ -112,9 +112,14 @@ class ApprovalView(discord.ui.View):
 # مهمة دورية لفحص الموقع كل 5 دقيقة
 @tasks.loop(minutes=5)
 async def fetch_derpibooru():
-    channel = bot.get_channel(ADMIN_CHANNEL_ID)
+    await bot.wait_until_ready() # 👈 انتظار البوت حتى يحمل القنوات بالكامل
+    
+    # 👈 تحويل الـ ID إلى رقم (int) تحسباً لوجود علامات تنصيص بالخطأ في config
+    channel = bot.get_channel(int(ADMIN_CHANNEL_ID)) 
     if not channel:
+        print(f"⚠️ تحذير: لم يتم العثور على القناة رقم {ADMIN_CHANNEL_ID}. تأكد من الرقم وصلاحيات البوت.")
         return
+        
     current_api_url = get_api_url()
     async with aiohttp.ClientSession() as session:
         async with session.get(current_api_url) as response:
@@ -135,22 +140,20 @@ async def fetch_derpibooru():
                         
                         # سحب اسم الناشر والوصف مع التعامل مع حالات عدم وجودهما
                         uploader = img.get('uploader') or "مجهول"
-                        #وصف
                         description = img.get('description') or "لا يوجد وصف."
-                        #تاريخ
-                        created_at = img.get('created_at', 'غير معروف')[:10] # نأخذ أول 10 حروف (التاريخ فقط)
-                        # اقتطاع الوصف إذا تجاوز الحد الأقصى المسموح به في ديسكورد
+                        created_at = img.get('created_at', 'غير معروف')[:10]
+                        
                         if len(description) > 1000:
                             description = description[:1000] + "... [مقتطع]"
                         
                         embed = discord.Embed(
                             title=f"مراجعة صورة جديدة | الناشر: {uploader}", 
-                          #  url=post_url, 
                             description=description,
                             color=discord.Color.orange()
                         )
                         embed.set_image(url=image_url)
-                        embed.add_field(name="📅 تاريخ النشر", value=created_at)
+                        embed.add_field(name=" تاريخ النشر", value=created_at)
+                        
                         view = ApprovalView(image_url, post_url, uploader, description, created_at)
                         await channel.send(embed=embed, view=view)
 
