@@ -23,7 +23,8 @@ async def update_stats(accepted_inc, rejected_inc):
     conn.close()
 
 async def get_tags():
-    tags = {"include": ["safe"], "exclude": []}
+    # نبدأ بقائمة فارغة، والـ API سيتولى البحث إذا لم نرسل شيئاً، أو نضع default واحد
+    tags = {"include": [], "exclude": []}
     conn = await get_connection()
     async with conn.cursor(aiomysql.DictCursor) as cur:
         await cur.execute("SELECT tag_name, tag_type FROM tags")
@@ -34,6 +35,11 @@ async def get_tags():
             elif row['tag_type'] == 'exclude':
                 tags['exclude'].append(row['tag_name'])
     conn.close()
+    
+    # إضافة safe إذا كانت القائمة فارغة
+    if not tags['include']:
+        tags['include'] = ["safe"]
+        
     return tags
 
 async def insert_tag(tag_name, tag_type):
