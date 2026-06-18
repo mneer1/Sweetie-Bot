@@ -133,10 +133,25 @@ async def fetch_derpibooru():
             print(f"⚠️ تحذير: تعذر الوصول إلى القناة {channel_id}: {exc}")
             return
 
-    current_api_url = get_api_url()
+    # تحميل التاغات ديناميكياً من ملف tags.json
+    try:
+        with open("tags.json", "r", encoding="utf-8") as f:
+            tags = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        tags = {"include": ["safe"], "exclude": []}
+
+    # بناء الاستعلام بشكل ديناميكي
+    query_string = ",".join(tags.get("include", ["safe"]) + [f"-{t}" for t in tags.get("exclude", [])])
+
+    params = {
+        "q": query_string,
+        "sf": "created_at",
+        "sd": "desc",
+        "per_page": 3
+    }
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(current_api_url) as response:
+        async with session.get(API_BASE_URL, params=params) as response:
 
             if response.status != 200:
                 print(f"⚠️ فشل جلب الصور من API. كود الخطأ: {response.status}")
@@ -149,7 +164,7 @@ async def fetch_derpibooru():
                 print("⚠️ لا توجد صور مطابقة للفلاتر الحالية.")
                 return
 
-            for img in reversed(images[:3]):
+            for img in reversed(images):
                 img_id = img.get("id")
                 if img_id is None or img_id in sent_images:
                     continue
