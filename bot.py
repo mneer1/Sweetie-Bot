@@ -122,12 +122,5 @@ async def setup_hook():
     await bot.load_extension("commands.stats")
     await bot.load_extension("commands.legendary")
     print("تم تحميل ملفات الأوامر بنجاح!")
-@bot.event
-async def on_ready():
-    # أضف هذا السطر ليتعرف البوت على المهمة
-    bot.fetch_derpibooru = fetch_derpibooru 
-    
-    if not fetch_derpibooru.is_running():
-        fetch_derpibooru.start()
-    print(f"البوت {bot.user} يعمل الآن!")
+
 bot.run(TOKEN)
