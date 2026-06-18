@@ -56,4 +56,4 @@ python bot.py
 | `!clear <1-100>` | Manage Messages | Clears a specified number of messages from the channel. |
 | `!stats` | Manage Messages | Displays overall review statistics and admin performance leaderboard. |
 | `!legendary` | Everyone | Fetches a random highly-upvoted "Safe" post from the platform. |
-| `!test` | Everyone | Basic response test to ensure the bot is online. |
+| `!test` | Everyone | Basic response test to ensure the bot is online. |   
