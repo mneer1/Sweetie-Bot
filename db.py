@@ -14,7 +14,6 @@ db_config = {
 async def run_query(sql, params=(), fetch=None):
     conn = await aiomysql.connect(**db_config)
     try:
-        # لا نمرر متغيرات للدالة cursor، بل نستدعيها مباشرة بناءً على الحالة
         if fetch:
             async with conn.cursor(DictCursor) as cur:
                 await cur.execute(sql, params)
@@ -32,7 +31,7 @@ async def run_query(sql, params=(), fetch=None):
     finally:
         conn.close()
 
-# --- بقية الدوال مع الإصلاحات ---
+# --- دوال الإحصائيات ---
 
 async def get_stats():
     result = await run_query("SELECT total, accepted, rejected FROM stats WHERE id = 1", fetch='one')
@@ -73,6 +72,8 @@ async def update_both_stats(user_id, field):
         total = COALESCE(total, 0) + 1, {field} = COALESCE({field}, 0) + 1
     """, (user_id,))
 
+# --- دوال التاغات (تم تحديثها) ---
+
 async def get_tags():
     rows = await run_query("SELECT tag_name, tag_type FROM tags", fetch='all')
     tags = {"include": [], "exclude": []}
@@ -82,9 +83,18 @@ async def get_tags():
                 tags['include'].append(row['tag_name'])
             elif row['tag_type'] == 'exclude':
                 tags['exclude'].append(row['tag_name'])
+    
+    # وضع safe كافتراضي إذا لم يكن هناك تاغات مطلوبة
     if not tags['include']:
         tags['include'] = ["safe"]
     return tags
 
 async def insert_tag(tag_name, tag_type):
+    # نقوم بحذف التاغ أولاً إذا كان موجوداً لمنع تكراره في الجدول (لتفادي الأخطاء)
+    await run_query("DELETE FROM tags WHERE tag_name = %s", (tag_name,))
+    # ثم نقوم بإدخاله بالنوع الجديد (include أو exclude)
     await run_query("INSERT INTO tags (tag_name, tag_type) VALUES (%s, %s)", (tag_name, tag_type))
+
+async def delete_tag(tag_name):
+    # دالة جديدة لحذف التاغ كلياً من قاعدة البيانات عند الحاجة
+    await run_query("DELETE FROM tags WHERE tag_name = %s", (tag_name,))
