@@ -55,17 +55,22 @@ class ApprovalView(discord.ui.View):
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
 
+        # 1. تحميل البيانات طازجة من الملف قبل التعديل
+        current_stats = load_stats() 
+        
         admin_id = str(interaction.user.id)
         admin_name = interaction.user.display_name
 
-        stats_data["total"] += 1
-        stats_data["accepted"] += 1
+        current_stats["total"] += 1
+        current_stats["accepted"] += 1
 
-        if admin_id not in stats_data["admins"]:
-            stats_data["admins"][admin_id] = {"name": admin_name, "accepted": 0, "rejected": 0}
+        if admin_id not in current_stats["admins"]:
+            current_stats["admins"][admin_id] = {"name": admin_name, "accepted": 0, "rejected": 0}
 
-        stats_data["admins"][admin_id]["accepted"] += 1
-        save_stats(stats_data)
+        current_stats["admins"][admin_id]["accepted"] += 1
+        
+        # 2. حفظ البيانات المحدثة
+        save_stats(current_stats)
 
         async with aiohttp.ClientSession() as session:
             webhook = discord.Webhook.from_url(WEBHOOK_URL, session=session)
@@ -84,7 +89,6 @@ class ApprovalView(discord.ui.View):
             public_text=f"✅ تم قبول هذا المنشور بواسطة {admin_name}",
         )
 
-        await interaction.followup.send("تم إرسال الصورة للقناة العامة.", ephemeral=True)
 
     @discord.ui.button(label="رفض ❌", style=discord.ButtonStyle.red)
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -109,7 +113,6 @@ class ApprovalView(discord.ui.View):
             public_text=f"❌ تم رفض هذا المنشور بواسطة {admin_name}",
         )
 
-        await interaction.followup.send("تم الرفض وتحديث السجل.", ephemeral=True)
 
 
 @tasks.loop(minutes=5)
