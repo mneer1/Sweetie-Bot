@@ -1,5 +1,5 @@
 import aiomysql
-import aiomysql.cursors
+from aiomysql.cursors import DictCursor
 import os
 
 db_config = {
@@ -14,9 +14,9 @@ db_config = {
 async def run_query(sql, params=(), fetch=None):
     conn = await aiomysql.connect(**db_config)
     try:
-        # الطريقة الآمنة لفتح المؤشر بناءً على الحاجة
+        # الحل: لا نمرر متغيرات للدالة cursor، بل نستدعيها مباشرة بناءً على الحالة
         if fetch:
-            async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
+            async with conn.cursor(DictCursor) as cur:
                 await cur.execute(sql, params)
                 if fetch == 'one':
                     result = await cur.fetchone()
@@ -32,7 +32,7 @@ async def run_query(sql, params=(), fetch=None):
     finally:
         conn.close()
 
-# --- باقي الدوال كما هي ---
+# --- بقية الدوال كما هي ---
 
 async def get_stats():
     result = await run_query("SELECT total, accepted, rejected FROM stats WHERE id = 1", fetch='one')
