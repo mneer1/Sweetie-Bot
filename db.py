@@ -1,8 +1,7 @@
 import aiomysql
-from aiomysql.cursors import DictCursor  # التعديل هنا: استيراد خاص
+import aiomysql.cursors
 import os
 
-# إعدادات الاتصال
 db_config = {
     'host': os.getenv('MYSQLHOST'),
     'port': int(os.getenv('MYSQLPORT', 3306)),
@@ -15,22 +14,26 @@ db_config = {
 async def run_query(sql, params=(), fetch=None):
     conn = await aiomysql.connect(**db_config)
     try:
-        # استخدام DictCursor المستورد مباشرة
-        cursor_class = DictCursor if fetch else None
-        async with conn.cursor(cursor_class) as cur:
-            await cur.execute(sql, params)
-            if fetch == 'one':
-                result = await cur.fetchone()
-            elif fetch == 'all':
-                result = await cur.fetchall()
-            else:
+        # الطريقة الآمنة لفتح المؤشر بناءً على الحاجة
+        if fetch:
+            async with conn.cursor(aiomysql.cursors.DictCursor) as cur:
+                await cur.execute(sql, params)
+                if fetch == 'one':
+                    result = await cur.fetchone()
+                else:
+                    result = await cur.fetchall()
+        else:
+            async with conn.cursor() as cur:
+                await cur.execute(sql, params)
                 result = None
-            await conn.commit()
-            return result
+        
+        await conn.commit()
+        return result
     finally:
         conn.close()
 
-# باقي الدوال تبقى كما هي بدون تغيير
+# --- باقي الدوال كما هي ---
+
 async def get_stats():
     result = await run_query("SELECT total, accepted, rejected FROM stats WHERE id = 1", fetch='one')
     return result if result else {"total": 0, "accepted": 0, "rejected": 0}
@@ -43,7 +46,9 @@ async def get_user_stats(user_id):
     return result if result else {"total": 0, "accepted": 0, "rejected": 0}
 
 async def update_both_stats(user_id, field):
+    # تحديث العام
     await run_query(f"UPDATE stats SET total = total + 1, {field} = {field} + 1 WHERE id = 1")
+    # تحديث المستخدم
     await run_query(f"""
         INSERT INTO stats_user (user_id, total, {field})
         VALUES (%s, 1, 1)
