@@ -17,7 +17,7 @@ class StatsAndLegendary(commands.Cog):
             with open("stats.json", "r") as f:
                 data = json.load(f)
         except:
-            await ctx.send("لم يتم تسجيل أي إحصائيات بعد.")س
+            await ctx.send("لم يتم تسجيل أي إحصائيات بعد.")
             return
 
         embed = discord.Embed(title="📊 إحصائيات مراجعة الصور", color=discord.Color.blue())
