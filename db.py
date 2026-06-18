@@ -14,7 +14,7 @@ db_config = {
 async def run_query(sql, params=(), fetch=None):
     conn = await aiomysql.connect(**db_config)
     try:
-        # الحل: لا نمرر متغيرات للدالة cursor، بل نستدعيها مباشرة بناءً على الحالة
+        # لا نمرر متغيرات للدالة cursor، بل نستدعيها مباشرة بناءً على الحالة
         if fetch:
             async with conn.cursor(DictCursor) as cur:
                 await cur.execute(sql, params)
@@ -32,28 +32,45 @@ async def run_query(sql, params=(), fetch=None):
     finally:
         conn.close()
 
-# --- بقية الدوال كما هي ---
+# --- بقية الدوال مع الإصلاحات ---
 
 async def get_stats():
     result = await run_query("SELECT total, accepted, rejected FROM stats WHERE id = 1", fetch='one')
-    return result if result else {"total": 0, "accepted": 0, "rejected": 0}
+    if result:
+        return {
+            "total": result.get("total") or 0,
+            "accepted": result.get("accepted") or 0,
+            "rejected": result.get("rejected") or 0
+        }
+    return {"total": 0, "accepted": 0, "rejected": 0}
 
 async def get_global_stats():
     return await get_stats()
 
 async def get_user_stats(user_id):
     result = await run_query("SELECT total, accepted, rejected FROM stats_user WHERE user_id = %s", (user_id,), fetch='one')
-    return result if result else {"total": 0, "accepted": 0, "rejected": 0}
+    if result:
+        return {
+            "total": result.get("total") or 0,
+            "accepted": result.get("accepted") or 0,
+            "rejected": result.get("rejected") or 0
+        }
+    return {"total": 0, "accepted": 0, "rejected": 0}
 
 async def update_both_stats(user_id, field):
-    # تحديث العام
-    await run_query(f"UPDATE stats SET total = total + 1, {field} = {field} + 1 WHERE id = 1")
+    # تحديث العام باستخدام COALESCE لتفادي مشكلة الـ NULL
+    await run_query(f"UPDATE stats SET total = COALESCE(total, 0) + 1, {field} = COALESCE({field}, 0) + 1 WHERE id = 1")
+    
+    # تحديد القيم الافتراضية للإدخال الأول في الجدول لتجنب ظهور NULL
+    accepted_val = 1 if field == "accepted" else 0
+    rejected_val = 1 if field == "rejected" else 0
+    
     # تحديث المستخدم
     await run_query(f"""
-        INSERT INTO stats_user (user_id, total, {field})
-        VALUES (%s, 1, 1)
+        INSERT INTO stats_user (user_id, total, accepted, rejected)
+        VALUES (%s, 1, {accepted_val}, {rejected_val})
         ON DUPLICATE KEY UPDATE
-        total = total + 1, {field} = {field} + 1
+        total = COALESCE(total, 0) + 1, {field} = COALESCE({field}, 0) + 1
     """, (user_id,))
 
 async def get_tags():
