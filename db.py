@@ -9,8 +9,11 @@ db_config = {
     'db': os.getenv('MYSQLDATABASE')
 }
 
+async def get_connection():
+    return await aiomysql.connect(**db_config)
+
 async def update_stats(accepted_inc, rejected_inc):
-    conn = await aiomysql.connect(**db_config)
+    conn = await get_connection()
     async with conn.cursor() as cur:
         await cur.execute(
             "UPDATE stats SET total = total + %s, accepted = accepted + %s, rejected = rejected + %s WHERE id = 1",
@@ -19,16 +22,22 @@ async def update_stats(accepted_inc, rejected_inc):
         await conn.commit()
     conn.close()
 
-async def get_stats():
-    conn = await aiomysql.connect(**db_config)
+async def get_tags():
+    tags = {"include": ["safe"], "exclude": []}
+    conn = await get_connection()
     async with conn.cursor(aiomysql.DictCursor) as cur:
-        await cur.execute("SELECT * FROM stats WHERE id = 1")
-        result = await cur.fetchone()
+        await cur.execute("SELECT tag_name, tag_type FROM tags")
+        rows = await cur.fetchall()
+        for row in rows:
+            if row['tag_type'] == 'include':
+                tags['include'].append(row['tag_name'])
+            elif row['tag_type'] == 'exclude':
+                tags['exclude'].append(row['tag_name'])
     conn.close()
-    return result
+    return tags
 
 async def insert_tag(tag_name, tag_type):
-    conn = await aiomysql.connect(**db_config)
+    conn = await get_connection()
     async with conn.cursor() as cur:
         await cur.execute("INSERT INTO tags (tag_name, tag_type) VALUES (%s, %s)", (tag_name, tag_type))
         await conn.commit()

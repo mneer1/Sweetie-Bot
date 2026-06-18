@@ -76,54 +76,48 @@ class ApprovalView(discord.ui.View):
 @tasks.loop(minutes=5)
 async def fetch_derpibooru():
     await bot.wait_until_ready()
+    print("بدأ البحث عن صور جديدة...") # لنتأكد أنه يعمل
 
     try:
-        channel_id = int(ADMIN_CHANNEL_ID)
-        channel = bot.get_channel(channel_id) or await bot.fetch_channel(channel_id)
-    except Exception as exc:
-        print(f"⚠️ خطأ في القناة: {exc}")
-        return
+        # جلب التاغات
+        tags = await db.get_tags()
+        print(f"التاغات المسترجعة: {tags}") # للتأكد أن قاعدة البيانات ترسل بيانات
 
-    # سحب التاغات من قاعدة البيانات بدلاً من ملف JSON
-    tags = await db.get_tags()
-    
-    query_string = ",".join(tags.get("include", ["safe"]) + [f"-{t}" for t in tags.get("exclude", [])])
+        query_string = ",".join(tags.get("include", ["safe"]) + [f"-{t}" for t in tags.get("exclude", [])])
+        print(f"استعلام API: {query_string}")
 
-    params = {
-        "q": query_string,
-        "sf": "created_at",
-        "sd": "desc",
-        "per_page": 3
-    }
+        params = {"q": query_string, "sf": "created_at", "sd": "desc", "per_page": 3}
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.get(API_BASE_URL, params=params) as response:
+                print(f"حالة اتصال API: {response.status}")
+                if response.status != 200:
+                    print(f"فشل الاتصال بـ API: {await response.text()}")
+                    return
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(API_BASE_URL, params=params) as response:
-            if response.status != 200:
-                return
+                data = await response.json()
+                images = data.get("images", [])
+                print(f"عدد الصور المجلوبة: {len(images)}")
 
-            data = await response.json()
-            images = data.get("images", [])
+                for img in reversed(images):
+                    # ... (باقي كود إرسال الصورة كما هو)
+                    # تأكد أنك تستخدم نفس الكود الذي كان لديك في هذه الجزئية
+                    img_id = img.get("id")
+                    if img_id is None or img_id in sent_images:
+                        continue
+                    
+                    sent_images.add(img_id)
+                    image_url = img.get("representations", {}).get("large") or img.get("view_url")
+                    uploader = img.get("uploader") or "مجهول"
+                    description = (img.get("description") or "لا يوجد وصف.")[:1000]
 
-            if not images:
-                return
+                    channel = bot.get_channel(int(ADMIN_CHANNEL_ID)) or await bot.fetch_channel(int(ADMIN_CHANNEL_ID))
+                    embed = discord.Embed(title=f"مراجعة: {uploader}", description=description, color=discord.Color.orange())
+                    embed.set_image(url=image_url)
+                    await channel.send(embed=embed, view=ApprovalView(image_url, uploader, description))
 
-            for img in reversed(images):
-                img_id = img.get("id")
-                if img_id is None or img_id in sent_images:
-                    continue
-
-                sent_images.add(img_id)
-                image_url = img.get("representations", {}).get("large") or img.get("view_url")
-                uploader = img.get("uploader") or "مجهول"
-                description = (img.get("description") or "لا يوجد وصف.")[:1000]
-
-                embed = discord.Embed(
-                    title=f"مراجعة صورة جديدة | الناشر: {uploader}",
-                    description=description,
-                    color=discord.Color.orange(),
-                )
-                embed.set_image(url=image_url)
-                await channel.send(embed=embed, view=ApprovalView(image_url, uploader, description))
+    except Exception as e:
+        print(f"خطأ غير متوقع في fetch_derpibooru: {e}")
 
 @bot.event
 async def on_ready():
