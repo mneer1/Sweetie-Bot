@@ -4,9 +4,9 @@ import aiohttp
 import json
 
 from config import TOKEN, WEBHOOK_URL, ADMIN_CHANNEL_ID
-from derpibooru import API_BASE_URL, get_api_params
+from derpibooru import get_api_params
 
-
+API_BASE_URL = "https://derpibooru.org/api/v1/json/search/images"
 def load_stats():
     try:
         with open("stats.json", "r", encoding="utf-8") as f:
