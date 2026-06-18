@@ -4,9 +4,10 @@ import aiohttp
 import json
 
 from config import TOKEN, WEBHOOK_URL, ADMIN_CHANNEL_ID
-from derpibooru import get_api_params
+from derpibooru import get_api_url
 
 API_BASE_URL = "https://derpibooru.org/api/v1/json/search/images"
+
 def load_stats():
     try:
         with open("stats.json", "r", encoding="utf-8") as f:
@@ -115,18 +116,25 @@ class ApprovalView(discord.ui.View):
 async def fetch_derpibooru():
     await bot.wait_until_ready()
 
-    channel = bot.get_channel(ADMIN_CHANNEL_ID)
+    try:
+        channel_id = int(ADMIN_CHANNEL_ID)
+    except ValueError:
+        print(f"❌ خطأ: معرّف القناة ADMIN_CHANNEL_ID الممرر ليس رقماً صالحاً.")
+        return
+
+    channel = bot.get_channel(channel_id)
     if channel is None:
         try:
-            channel = await bot.fetch_channel(ADMIN_CHANNEL_ID)
+            channel = await bot.fetch_channel(channel_id)
         except Exception as exc:
-            print(f"⚠️ تحذير: تعذر الوصول إلى القناة {ADMIN_CHANNEL_ID}: {exc}")
+            print(f"⚠️ تحذير: تعذر الوصول إلى القناة {channel_id}: {exc}")
             return
 
-    params = get_api_params(per_page=25)
+    current_api_url = get_api_url()
 
     async with aiohttp.ClientSession() as session:
-        async with session.get(API_BASE_URL, params=params) as response:
+        async with session.get(current_api_url) as response:
+
             if response.status != 200:
                 print(f"⚠️ فشل جلب الصور من API. كود الخطأ: {response.status}")
                 return
@@ -173,7 +181,7 @@ async def on_ready():
 @bot.command()
 async def test(ctx):
     await ctx.send("سويتي بوت تعمل بنجاح!")
-    print(get_api_params())
+    print(get_api_url())
 
 
 @bot.event
