@@ -46,5 +46,39 @@ class Admin(commands.Cog):
         except Exception as e:
             await ctx.send(f"حدث خطأ أثناء قراءة القاعدة: {e}")
 
+    # أمر الإحصائيات (الموحد)
+    @commands.command(name="stats")
+    async def stats(self, ctx, member: discord.Member = None):
+        """عرض الإحصائيات العامة أو إحصائيات مستخدم: !stats أو !stats @user"""
+        try:
+            # إذا لم يتم تحديد شخص، نعرض الإحصائيات العامة
+            if member is None:
+                data = await db.get_global_stats()
+                if not data:
+                    await ctx.send("لا توجد إحصائيات عامة مسجلة بعد.")
+                    return
+                
+                embed = discord.Embed(title="📊 الإحصائيات العامة للبوت", color=discord.Color.gold())
+                embed.add_field(name="إجمالي", value=data['total'], inline=True)
+                embed.add_field(name="مقبول ✅", value=data['accepted'], inline=True)
+                embed.add_field(name="مرفوض ❌", value=data['rejected'], inline=True)
+                await ctx.send(embed=embed)
+            
+            # إذا تم تحديد شخص، نعرض إحصائيات المستخدم
+            else:
+                data = await db.get_user_stats(member.id)
+                if not data:
+                    await ctx.send(f"هذا المستخدم ({member.display_name}) ليس لديه إحصائيات بعد.")
+                    return
+                
+                embed = discord.Embed(title=f"📊 إحصائيات {member.display_name}", color=discord.Color.blue())
+                embed.add_field(name="إجمالي", value=data['total'], inline=True)
+                embed.add_field(name="مقبول ✅", value=data['accepted'], inline=True)
+                embed.add_field(name="مرفوض ❌", value=data['rejected'], inline=True)
+                await ctx.send(embed=embed)
+                
+        except Exception as e:
+            await ctx.send(f"حدث خطأ أثناء جلب الإحصائيات: {e}")
+
 async def setup(bot):
     await bot.add_cog(Admin(bot))

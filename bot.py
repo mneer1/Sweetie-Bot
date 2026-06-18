@@ -4,6 +4,7 @@ import aiohttp
 import db  # نستدعي ملف قاعدة البيانات
 
 from config import TOKEN, WEBHOOK_URL, ADMIN_CHANNEL_ID
+# تأكد أن استيراد get_api_url صحيح أو استبدله بـ API_BASE_URL مباشرة
 from derpibooru import get_api_url
 
 API_BASE_URL = "https://derpibooru.org/api/v1/json/search/images"
@@ -39,8 +40,8 @@ class ApprovalView(discord.ui.View):
     async def approve(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
 
-        # تحديث قاعدة البيانات بدلاً من الملف
-        await db.update_stats(accepted_inc=1, rejected_inc=0)
+        # تحديث قاعدة البيانات (العام + المستخدم)
+        await db.update_both_stats(interaction.user.id, "accepted")
         
         async with aiohttp.ClientSession() as session:
             webhook = discord.Webhook.from_url(WEBHOOK_URL, session=session)
@@ -63,8 +64,8 @@ class ApprovalView(discord.ui.View):
     async def deny(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
 
-        # تحديث قاعدة البيانات بدلاً من الملف
-        await db.update_stats(accepted_inc=0, rejected_inc=1)
+        # تحديث قاعدة البيانات (العام + المستخدم)
+        await db.update_both_stats(interaction.user.id, "rejected")
 
         await self._finalize(
             interaction,
@@ -76,32 +77,24 @@ class ApprovalView(discord.ui.View):
 @tasks.loop(minutes=5)
 async def fetch_derpibooru():
     await bot.wait_until_ready()
-    print("بدأ البحث عن صور جديدة...") # لنتأكد أنه يعمل
+    print("بدأ البحث عن صور جديدة...")
 
     try:
-        # جلب التاغات
         tags = await db.get_tags()
-        print(f"التاغات المسترجعة: {tags}") # للتأكد أن قاعدة البيانات ترسل بيانات
-
         query_string = ",".join(tags.get("include", ["safe"]) + [f"-{t}" for t in tags.get("exclude", [])])
-        print(f"استعلام API: {query_string}")
-
+        
         params = {"q": query_string, "sf": "created_at", "sd": "desc", "per_page": 3}
         
         async with aiohttp.ClientSession() as session:
             async with session.get(API_BASE_URL, params=params) as response:
-                print(f"حالة اتصال API: {response.status}")
                 if response.status != 200:
                     print(f"فشل الاتصال بـ API: {await response.text()}")
                     return
 
                 data = await response.json()
                 images = data.get("images", [])
-                print(f"عدد الصور المجلوبة: {len(images)}")
 
                 for img in reversed(images):
-                    # ... (باقي كود إرسال الصورة كما هو)
-                    # تأكد أنك تستخدم نفس الكود الذي كان لديك في هذه الجزئية
                     img_id = img.get("id")
                     if img_id is None or img_id in sent_images:
                         continue
