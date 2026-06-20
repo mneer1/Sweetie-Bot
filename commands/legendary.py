@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import aiohttp
 import random
-import config
+import db  # استيراد وحدة قاعدة البيانات
 
 API_BASE_URL = "https://derpibooru.org/api/v1/json/search/images"
 
@@ -19,12 +19,13 @@ class Legendary(commands.Cog):
         if self.session:
             await self.session.close()
 
-    def build_query(self) -> str:
+    async def build_query(self) -> str:
+        """بناء استعلام من قاعدة البيانات بدلاً من config"""
+        tags = await db.get_tags()
+        include_tags = tags.get("include", ["safe"])
+        exclude_tags = tags.get("exclude", [])
+
         query_parts = []
-
-        include_tags = getattr(config, "INCLUDE_TAGS", ["safe"])
-        exclude_tags = getattr(config, "EXCLUDE_TAGS", [])
-
         for tag in include_tags:
             tag = tag.strip()
             if tag:
@@ -39,7 +40,7 @@ class Legendary(commands.Cog):
 
     @commands.command(name="legendary")
     async def legendary_post(self, ctx):
-        query_string = self.build_query()
+        query_string = await self.build_query()
 
         # جلب 50 صورة لتقليل أرقام الصفحات المطلوبة
         params = {
