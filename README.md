@@ -1,4 +1,4 @@
-English
+
 An advanced Discord moderation and automation bot built with discord.py. It automatically fetches artwork from Derpibooru, filters content dynamically based on custom tags, and routes them through an interactive admin review queue before publishing to public channels.
 
 Features
@@ -9,8 +9,6 @@ Dynamic Tag Control: Whitelist or blacklist tags on-the-fly using chat commands.
 Interactive Approvals: Buttons for Admins to Approve (✅) or Deny (❌) posts directly from Discord.
 
 Action Logs & Statistics: Automatically logs which admin took action and saves metrics locally to stats.json.
-
-Public Webhook Delivery: Sends approved content with an embedded "Download Image" button for end-users.
 
 Modular Architecture: Utilizes Discord Cogs to cleanly separate command categories.
 
