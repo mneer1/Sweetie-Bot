@@ -2,17 +2,15 @@ import urllib.parse
 import db
 
 async def get_api_url():
-    # 1. جلب البيانات من القاعدة بدلاً من config
     tags = await db.get_tags()
-    query_parts = []
+    include = tags.get("include", ["safe"])
+    exclude = tags.get("exclude", [])
 
-    # 2. إضافة التاغات المطلوبة
-    query_parts.extend(tags["include"])
+    # تأكد من وجود safe إذا كانت القائمة فارغة
+    if not include:
+        include = ["safe"]
 
-    # 3. إضافة التاغات المحظورة مع علامة الناقص (-)
-    for tag in tags["exclude"]:
-        query_parts.append(f"-{tag}")
-
+    query_parts = include + [f"-{tag}" for tag in exclude]
     query = ",".join(query_parts)
     safe_query = urllib.parse.quote(query)
 
