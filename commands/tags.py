@@ -63,6 +63,19 @@ class Tags(commands.Cog):
         embed.add_field(name="🚫 التاغات المحظورة", value=f"`{excluded}`", inline=False)
         
         await ctx.send(embed=embed)
-
+#حظر عدة تاغات دفعة واحدة
+@commands.command(name="block_bulk")
+@commands.has_permissions(administrator=True)
+async def block_bulk(self, ctx, *, tags_input: str):
+        tags = [t.strip().lower() for t in tags_input.split(',')]
+        current_tags = await db.get_tags()
+        blocked_count = 0
+        
+        for tag in tags:
+            if tag and tag not in current_tags["exclude"]:
+                await db.insert_tag(tag, 'exclude')
+                blocked_count += 1
+                
+        await ctx.send(f"🚫 تم حظر {blocked_count} تاغ دفعة واحدة.")
 async def setup(bot):
     await bot.add_cog(Tags(bot))
