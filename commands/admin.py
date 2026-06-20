@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import db  # استيراد ملف الـ db
+import db  
 
 class Admin(commands.Cog):
     def __init__(self, bot):
@@ -29,7 +29,6 @@ class Admin(commands.Cog):
     async def test_fetch(self, ctx):
         await ctx.send("🔄 جاري إعادة تشغيل مهمة البحث (fetch task) للتحقق من الاتصال...")
         try:
-            # استخدام restart() بدلاً من callback() لأنها آمنة للـ tasks
             self.bot.fetch_derpibooru.restart()
             await ctx.send("✅ تم إعادة تشغيل المهمة بنجاح، راجع الـ Console.")
         except Exception as e:
@@ -45,6 +44,21 @@ class Admin(commands.Cog):
             await ctx.send(f"التاغات التي يراها البوت حالياً: \n`{tags}`")
         except Exception as e:
             await ctx.send(f"حدث خطأ أثناء قراءة القاعدة: {e}")
+
+    # أمر حظر التاغات دفعة واحدة
+    @commands.command(name="block_bulk")
+    @commands.has_permissions(administrator=True)
+    async def block_bulk(self, ctx, *, tags_input: str):
+        tags = [t.strip().lower() for t in tags_input.split(',')]
+        current_tags = await db.get_tags()
+        blocked_count = 0
+        
+        for tag in tags:
+            if tag and tag not in current_tags["exclude"]:
+                await db.insert_tag(tag, 'exclude')
+                blocked_count += 1
+                
+        await ctx.send(f"🚫 تم حظر {blocked_count} تاغ دفعة واحدة.")
 
 async def setup(bot):
     await bot.add_cog(Admin(bot))
